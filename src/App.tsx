@@ -1,0 +1,383 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  INITIAL_DONATIONS,
+  INITIAL_EXPENSES,
+  INITIAL_MILESTONES,
+  INITIAL_CAMPAIGNS,
+  INITIAL_IMPACT_REPORTS,
+  INITIAL_DONOR_PROFILES,
+  INITIAL_RECURRING_DONATIONS,
+  computeTransparencySummary,
+  formatGBP,
+} from './utils/transparency';
+import {
+  DonationRecord,
+  ExpenseRecord,
+  MilestoneItem,
+  CampaignGoal,
+  ImpactReport,
+  DonorProfile,
+  RecurringDonation,
+} from './types';
+import { ThreeBeaconScene } from './components/ThreeBeaconScene';
+import { NavigationHeader, ActiveNavTab } from './components/NavigationHeader';
+import { CollapsibleDock } from './components/CollapsibleDock';
+import { DonationModal } from './components/DonationModal';
+import { ReceiptViewerModal } from './components/ReceiptViewerModal';
+import { TransparencyLedgerView } from './components/TransparencyLedgerView';
+import { ReportingToolsView } from './components/ReportingToolsView';
+import { AwarenessHubView } from './components/AwarenessHubView';
+import { CampaignGoalTracker } from './components/CampaignGoalTracker';
+import { ImpactReportsSection } from './components/ImpactReportsSection';
+import { DonorPortalView } from './components/DonorPortalView';
+import { Target, ArrowRight, Heart } from 'lucide-react';
+
+export default function App() {
+  // State with localStorage persistence
+  const [donations, setDonations] = useState<DonationRecord[]>(() => {
+    try {
+      const stored = localStorage.getItem('rh_donations');
+      return stored ? JSON.parse(stored) : INITIAL_DONATIONS;
+    } catch {
+      return INITIAL_DONATIONS;
+    }
+  });
+
+  const [expenses, setExpenses] = useState<ExpenseRecord[]>(() => {
+    try {
+      const stored = localStorage.getItem('rh_expenses');
+      return stored ? JSON.parse(stored) : INITIAL_EXPENSES;
+    } catch {
+      return INITIAL_EXPENSES;
+    }
+  });
+
+  const [campaigns, setCampaigns] = useState<CampaignGoal[]>(() => {
+    try {
+      const stored = localStorage.getItem('rh_campaigns');
+      return stored ? JSON.parse(stored) : INITIAL_CAMPAIGNS;
+    } catch {
+      return INITIAL_CAMPAIGNS;
+    }
+  });
+
+  const [impactReports, setImpactReports] = useState<ImpactReport[]>(() => {
+    try {
+      const stored = localStorage.getItem('rh_impact_reports');
+      return stored ? JSON.parse(stored) : INITIAL_IMPACT_REPORTS;
+    } catch {
+      return INITIAL_IMPACT_REPORTS;
+    }
+  });
+
+  const [donorProfiles, setDonorProfiles] = useState<DonorProfile[]>(() => {
+    try {
+      const stored = localStorage.getItem('rh_donor_profiles');
+      return stored ? JSON.parse(stored) : INITIAL_DONOR_PROFILES;
+    } catch {
+      return INITIAL_DONOR_PROFILES;
+    }
+  });
+
+  const [recurringDonations, setRecurringDonations] = useState<RecurringDonation[]>(() => {
+    try {
+      const stored = localStorage.getItem('rh_recurring_donations');
+      return stored ? JSON.parse(stored) : INITIAL_RECURRING_DONATIONS;
+    } catch {
+      return INITIAL_RECURRING_DONATIONS;
+    }
+  });
+
+  // Active navigation tab
+  const [activeTab, setActiveTab] = useState<ActiveNavTab>('beacon');
+
+  // Modals & Navigation filters
+  const [isDonateOpen, setIsDonateOpen] = useState(false);
+  const [donateCampaignId, setDonateCampaignId] = useState<string | null>(null);
+  const [activeReceiptExpense, setActiveReceiptExpense] = useState<ExpenseRecord | null>(null);
+  const [filterCampaignForImpact, setFilterCampaignForImpact] = useState<string | null>(null);
+
+  // 3D Scene Interactive Controls
+  const [isDockCollapsed, setIsDockCollapsed] = useState(false);
+  const [explodedFactor, setExplodedFactor] = useState(0);
+  const [autoRotate, setAutoRotate] = useState(true);
+  const [cameraPreset, setCameraPreset] = useState<'hero' | 'nerve' | 'core' | 'overhead'>('hero');
+  const [selectedMilestoneId, setSelectedMilestoneId] = useState<string | null>(null);
+
+  // Synchronize localStorage on modifications
+  useEffect(() => {
+    try {
+      localStorage.setItem('rh_donations', JSON.stringify(donations));
+    } catch (e) {
+      console.warn('Unable to persist donations', e);
+    }
+  }, [donations]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('rh_expenses', JSON.stringify(expenses));
+    } catch (e) {
+      console.warn('Unable to persist expenses', e);
+    }
+  }, [expenses]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('rh_campaigns', JSON.stringify(campaigns));
+    } catch (e) {
+      console.warn('Unable to persist campaigns', e);
+    }
+  }, [campaigns]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('rh_impact_reports', JSON.stringify(impactReports));
+    } catch (e) {
+      console.warn('Unable to persist impact reports', e);
+    }
+  }, [impactReports]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('rh_recurring_donations', JSON.stringify(recurringDonations));
+    } catch (e) {
+      console.warn('Unable to persist recurring donations', e);
+    }
+  }, [recurringDonations]);
+
+  // Compute live transparency summary
+  const summary = useMemo(() => {
+    return computeTransparencySummary(donations, expenses, 2000, 5000);
+  }, [donations, expenses]);
+
+  // Reconcile milestone spending based on current expenses
+  const milestones: MilestoneItem[] = useMemo(() => {
+    return INITIAL_MILESTONES.map(m => {
+      const categorySpent = expenses
+        .filter(e => e.category === m.category)
+        .reduce((sum, e) => sum + e.amountGBP, 0);
+      return {
+        ...m,
+        spentGBP: categorySpent > 0 ? categorySpent : m.spentGBP,
+      };
+    });
+  }, [expenses]);
+
+  // Keyboard shortcut listener ('h' or 'H' to toggle dock in 3D view)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+      if (e.key === 'h' || e.key === 'H') {
+        setIsDockCollapsed(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleOpenDonate = (campaignId?: string) => {
+    setDonateCampaignId(campaignId || null);
+    setIsDonateOpen(true);
+  };
+
+  const handleAddDonation = (newDonation: DonationRecord) => {
+    setDonations(prev => [newDonation, ...prev]);
+
+    // Check if new donor email should be added to profiles
+    if (newDonation.donorEmail && !donorProfiles.some(p => p.email.toLowerCase() === newDonation.donorEmail?.toLowerCase())) {
+      const newProfile: DonorProfile = {
+        id: `donor-${Date.now().toString().slice(-4)}`,
+        name: newDonation.donorName,
+        email: newDonation.donorEmail,
+        isAnonymous: newDonation.isAnonymous,
+        joinedDate: newDonation.date,
+        badge: 'Verified Contributor',
+      };
+      setDonorProfiles(prev => [...prev, newProfile]);
+    }
+  };
+
+  const handleAddExpense = (newExpense: ExpenseRecord) => {
+    setExpenses(prev => [newExpense, ...prev]);
+  };
+
+  const handleAddCampaign = (newCamp: CampaignGoal) => {
+    setCampaigns(prev => [...prev, newCamp]);
+  };
+
+  const handleAddImpactReport = (newReport: ImpactReport) => {
+    setImpactReports(prev => [newReport, ...prev]);
+  };
+
+  const handleToggleRecurringStatus = (id: string, newStatus: 'active' | 'paused' | 'cancelled') => {
+    setRecurringDonations(prev =>
+      prev.map(r => (r.id === id ? { ...r, status: newStatus } : r))
+    );
+  };
+
+  const handleAddRecurring = (newRec: RecurringDonation) => {
+    setRecurringDonations(prev => [newRec, ...prev]);
+  };
+
+  const handleSelectCampaignForImpact = (campaignId: string) => {
+    setFilterCampaignForImpact(campaignId);
+    setActiveTab('impact');
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans relative selection:bg-amber-500 selection:text-slate-950">
+      {/* Top Persistent Header */}
+      <NavigationHeader
+        summary={summary}
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        onOpenDonate={() => handleOpenDonate()}
+      />
+
+      {/* Main View Area */}
+      <main className="flex-1 w-full relative">
+        {activeTab === 'beacon' && (
+          <div className="w-full h-screen relative overflow-hidden">
+            {/* 3D WebGL Canvas Viewport (100% unobstructed center) */}
+            <ThreeBeaconScene
+              milestones={milestones}
+              summary={summary}
+              selectedMilestoneId={selectedMilestoneId}
+              onSelectMilestone={setSelectedMilestoneId}
+              explodedFactor={explodedFactor}
+              autoRotate={autoRotate}
+              cameraPreset={cameraPreset}
+            />
+
+            {/* Viewport Floating Goal & Spec Badge (Top Left, under header) */}
+            <div className="absolute top-20 left-4 sm:left-6 z-20 pointer-events-auto select-none max-w-sm space-y-2">
+              <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-4 shadow-2xl">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-amber-400 uppercase tracking-wider mb-2">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
+                    <span>3D Hope &amp; Transparency Beacon</span>
+                  </span>
+                  <span className="text-cyan-400 font-mono">100% Audited</span>
+                </div>
+
+                {/* Main Goal Progress Bar */}
+                <div className="space-y-1.5 pt-1 border-t border-slate-800/80">
+                  <div className="flex items-center justify-between text-xs font-mono">
+                    <span className="text-slate-300">Phase 1 Goal:</span>
+                    <span className="text-emerald-400 font-bold">
+                      {formatGBP(summary.totalInflowsGBP)} / £2,000
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-cyan-500 via-amber-500 to-emerald-400 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(100, (summary.totalInflowsGBP / 2000) * 100)}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5">
+                    <span>{((summary.totalInflowsGBP / 2000) * 100).toFixed(0)}% Funded</span>
+                    <button
+                      onClick={() => setActiveTab('goals')}
+                      className="text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <span>Explore Drives</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Collapsible Unified Bottom Control Dock */}
+            <CollapsibleDock
+              isCollapsed={isDockCollapsed}
+              onToggleCollapse={() => setIsDockCollapsed(prev => !prev)}
+              explodedFactor={explodedFactor}
+              onExplodedChange={setExplodedFactor}
+              autoRotate={autoRotate}
+              onToggleAutoRotate={() => setAutoRotate(prev => !prev)}
+              cameraPreset={cameraPreset}
+              onSelectCameraPreset={setCameraPreset}
+              milestones={milestones}
+              selectedMilestoneId={selectedMilestoneId}
+              onSelectMilestone={setSelectedMilestoneId}
+              onOpenDonate={() => handleOpenDonate()}
+            />
+          </div>
+        )}
+
+        {activeTab === 'goals' && (
+          <CampaignGoalTracker
+            campaigns={campaigns}
+            donations={donations}
+            onOpenDonate={handleOpenDonate}
+            onSelectCampaignForImpact={handleSelectCampaignForImpact}
+            onAddCampaign={handleAddCampaign}
+          />
+        )}
+
+        {activeTab === 'impact' && (
+          <ImpactReportsSection
+            reports={impactReports}
+            campaigns={campaigns}
+            selectedCampaignId={filterCampaignForImpact}
+            onSelectCampaign={setFilterCampaignForImpact}
+            onAddImpactReport={handleAddImpactReport}
+          />
+        )}
+
+        {activeTab === 'donors' && (
+          <DonorPortalView
+            donorProfiles={donorProfiles}
+            donations={donations}
+            recurringDonations={recurringDonations}
+            campaigns={campaigns}
+            onToggleRecurringStatus={handleToggleRecurringStatus}
+            onOpenDonate={handleOpenDonate}
+            onAddRecurring={handleAddRecurring}
+          />
+        )}
+
+        {activeTab === 'ledger' && (
+          <TransparencyLedgerView
+            donations={donations}
+            expenses={expenses}
+            summary={summary}
+            onOpenDonate={() => handleOpenDonate()}
+            onViewReceipt={expense => setActiveReceiptExpense(expense)}
+            onAddExpense={handleAddExpense}
+          />
+        )}
+
+        {activeTab === 'reports' && (
+          <ReportingToolsView
+            donations={donations}
+            expenses={expenses}
+            summary={summary}
+          />
+        )}
+
+        {activeTab === 'awareness' && (
+          <AwarenessHubView
+            onOpenDonate={() => handleOpenDonate()}
+          />
+        )}
+      </main>
+
+      {/* Global Modals */}
+      <DonationModal
+        isOpen={isDonateOpen}
+        onClose={() => setIsDonateOpen(false)}
+        onAddDonation={handleAddDonation}
+        initialCampaignId={donateCampaignId}
+      />
+
+      <ReceiptViewerModal
+        expense={activeReceiptExpense}
+        onClose={() => setActiveReceiptExpense(null)}
+      />
+    </div>
+  );
+}
