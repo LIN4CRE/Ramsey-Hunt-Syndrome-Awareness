@@ -96,8 +96,8 @@ export default function App() {
     }
   });
 
-  // Active navigation tab
-  const [activeTab, setActiveTab] = useState<ActiveNavTab>('beacon');
+  // Active navigation tab (default to patient-led awareness hub)
+  const [activeTab, setActiveTab] = useState<ActiveNavTab>('awareness');
 
   // Modals & Navigation filters
   const [isDonateOpen, setIsDonateOpen] = useState(false);
@@ -422,6 +422,8 @@ export default function App() {
         {activeTab === 'awareness' && (
           <AwarenessHubView
             onOpenDonate={() => handleOpenDonate()}
+            onExploreGoals={() => setActiveTab('goals')}
+            onViewLedger={() => setActiveTab('ledger')}
           />
         )}
       </main>

@@ -1,6 +1,6 @@
 {
   "name": "Ramsay Hunt Awareness & Transparent Donation Platform",
-  "description": "Patient-led Ramsay Hunt syndrome awareness platform with real-time financial transparency, PayPal transaction processing, interactive 3D Hope Beacon, and regulatory reporting.",
+  "description": "Life after Ramsay Hunt syndrome: the effects you cannot see. Patient-led awareness initiative promoting timely 72-hour recognition, lived experience validation, and 100% financial transparency.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
