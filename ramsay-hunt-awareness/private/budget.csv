@@ -1,0 +1,9 @@
+Item,Category,Needed Now?,Estimated Cost (GBP),Verified Cost / Quote,Approval Status,Who Pays?,Notes
+Drafting & Core Documentation,Administration,Yes,0.00,0.00,Approved,Existing Tools,Built with existing workspace tools; zero out-of-pocket
+Domain Registration (.org.uk or .org),Infrastructure,No,12.00,11.99,Pending Decision,To Agree,Optional custom domain; free staging URL currently used
+Website Hosting & CDN,Infrastructure,No,0.00,0.00,Approved,Cloud Hosting,Using existing web platform / free static tiers
+Project Email Setup (Workspace / Proton),Communications,Optional,36.00,3.00/month,Pending Decision,To Agree,Privacy-preserving official contact email
+A5 Awareness Leaflet Printing (250 copies),Outreach Materials,No,45.00,38.50,Pending Phase 2,Donations / Sponsor,Digital-first pilot; printing quotes obtained for Phase 2
+Charity Registration Application Fee,Legal / Governance,No,0.00,0.00,N/A,Charity Commission,Free to apply to Charity Commission if independent CIO chosen
+Public Liability / Trustee Insurance,Insurance,No,120.00,Pending Quote,Pending Route,To Agree,Only required if physical public events or premises launched
+Accessibility Audit & Testing Tools,Quality Assurance,Optional,0.00,0.00,Approved,Open Source,WCAG 2.1 AA automated audits via Playwright & Axe core

@@ -1,0 +1,14 @@
+ID,Task,Owner,Priority,Energy Demand,Dependency,Due Date Agreed,Status,Approval Needed
+TSK-101,Confirm working jurisdiction and preferred route (explore partnership first),Founder,High,Low,None,Pending,Awaiting Decision,Yes (DEC-001)
+TSK-102,Select story attribution format (anonymous vs. first name),Founder,High,Low,None,Pending,Awaiting Decision,Yes (DEC-002)
+TSK-103,Confirm weekly energy cap (4-6h) and £0 initial budget,Founder,High,Low,None,Pending,Awaiting Decision,Yes (DEC-003)
+TSK-104,Draft one-page project brief and route options comparison,AI Agent,High,Medium,None,01/11/2026,Completed,No
+TSK-105,Compile verified primary source register,AI Agent,High,Medium,None,01/11/2026,Completed,No
+TSK-106,Draft initial outreach emails for Facial Palsy UK and The Brain Charity,AI Agent,Medium,Medium,TSK-101,01/11/2026,Completed,Yes (DEC-004/005)
+TSK-107,Draft founder lived experience story with privacy attribution options,AI Agent,High,Medium,TSK-102,01/11/2026,Completed,Yes (DEC-006)
+TSK-108,Build interactive transparency portal and financial audit engine,AI Agent,High,High,None,01/11/2026,Completed,No
+TSK-109,Draft printable A5 awareness leaflet and 6 awareness social posts,AI Agent,Medium,Medium,None,01/11/2026,Completed,Yes
+TSK-110,Draft volunteer helper role description to support founder,AI Agent,High,Low,TSK-103,01/11/2026,Completed,Yes (DEC-008)
+TSK-111,Draft core operational policies (GDPR/Article 9 Safeguarding Financial Controls Complaints),AI Agent,Medium,Medium,None,01/11/2026,Completed,No
+TSK-112,Transmit approved partner introductory email to Facial Palsy UK,Founder / Helper,Medium,Low,TSK-106,Pending,Not Started,Yes
+TSK-113,Publish approved founder story and verified links to live web portal,Founder / Helper,Medium,Low,TSK-107,Pending,Not Started,Yes
