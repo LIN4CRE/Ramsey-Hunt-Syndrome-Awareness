@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { MilestoneItem, TransparencySummary } from '../types';
+import { sound } from '../utils/audio';
 
 interface ThreeBeaconSceneProps {
   milestones: MilestoneItem[];
@@ -12,11 +13,11 @@ interface ThreeBeaconSceneProps {
   explodedFactor: number; // 0 to 1
   autoRotate: boolean;
   cameraPreset: 'hero' | 'nerve' | 'core' | 'overhead';
+  pulseTrigger?: number; // increments on donation
 }
 
 // Module-level reusable math scratch objects for zero GC in animation loop
 const _vec3Target = new THREE.Vector3();
-const _vec3Current = new THREE.Vector3();
 const _raycaster = new THREE.Raycaster();
 const _mouse = new THREE.Vector2();
 
@@ -28,6 +29,7 @@ export const ThreeBeaconScene: React.FC<ThreeBeaconSceneProps> = ({
   explodedFactor,
   autoRotate,
   cameraPreset,
+  pulseTrigger = 0,
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -43,6 +45,8 @@ export const ThreeBeaconScene: React.FC<ThreeBeaconSceneProps> = ({
   const innerGimbal2Ref = useRef<THREE.Mesh | null>(null);
   const gemCoreRef = useRef<THREE.Mesh | null>(null);
   const shardMeshesRef = useRef<Map<string, THREE.Mesh>>(new Map());
+  const particlesRef = useRef<THREE.Points | null>(null);
+  const pulseIntensityRef = useRef<number>(0);
 
   // Store interactive props in refs to avoid restarting canvas on prop change
   const propsRef = useRef({
@@ -66,6 +70,13 @@ export const ThreeBeaconScene: React.FC<ThreeBeaconSceneProps> = ({
       onSelectMilestone,
     };
   }, [explodedFactor, autoRotate, cameraPreset, selectedMilestoneId, milestones, summary, onSelectMilestone]);
+
+  // Trigger visual celebration pulse on donation
+  useEffect(() => {
+    if (pulseTrigger > 0) {
+      pulseIntensityRef.current = 1.0;
+    }
+  }, [pulseTrigger]);
 
   useEffect(() => {
     const container = mountRef.current;
@@ -100,8 +111,8 @@ export const ThreeBeaconScene: React.FC<ThreeBeaconSceneProps> = ({
 
     // 3. Scene & Camera
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a0f1d);
-    scene.fog = new THREE.FogExp2(0x0a0f1d, 0.038);
+    scene.background = new THREE.Color(0x080d1a);
+    scene.fog = new THREE.FogExp2(0x080d1a, 0.038);
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(
@@ -110,7 +121,7 @@ export const ThreeBeaconScene: React.FC<ThreeBeaconSceneProps> = ({
       0.1,
       100
     );
-    camera.position.set(0, 5, 11);
+    camera.position.set(0, 4.6, 11);
     cameraRef.current = camera;
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -160,10 +171,9 @@ export const ThreeBeaconScene: React.FC<ThreeBeaconSceneProps> = ({
     scene.add(corePointLight);
 
     // 6. Ground & Procedural Contact Shadow
-    // Floor Disc
-    const floorGeo = new THREE.CircleGeometry(16, 48);
+    const floorGeo = new THREE.CircleGeometry(18, 48);
     const floorMat = new THREE.MeshStandardMaterial({
-      color: 0x0e1726,
+      color: 0x0b1120,
       roughness: 0.9,
       metalness: 0.1,
     });
@@ -188,7 +198,7 @@ export const ThreeBeaconScene: React.FC<ThreeBeaconSceneProps> = ({
 
     const shadowTex = new THREE.CanvasTexture(shadowCanvas);
     shadowTex.colorSpace = THREE.SRGBColorSpace;
-    const shadowGeo = new THREE.CircleGeometry(4.5, 32);
+    const shadowGeo = new THREE.CircleGeometry(4.8, 32);
     const shadowMat = new THREE.MeshBasicMaterial({
       map: shadowTex,
       transparent: true,
@@ -197,11 +207,10 @@ export const ThreeBeaconScene: React.FC<ThreeBeaconSceneProps> = ({
     });
     const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
     shadowMesh.rotation.x = -Math.PI / 2;
-    shadowMesh.position.y = 0.015; // Offset to avoid coplanar Z-fighting
+    shadowMesh.position.y = 0.015;
     scene.add(shadowMesh);
 
     // 7. COMPOSITE PROCEDURAL HERO MODEL: "The Hope & Transparency Beacon"
-    // Composed of 8 distinct parts adhering to Three.js composite craft guidelines
     const beaconGroup = new THREE.Group();
     beaconGroup.position.set(0, 0, 0);
     scene.add(beaconGroup);
@@ -275,7 +284,6 @@ export const ThreeBeaconScene: React.FC<ThreeBeaconSceneProps> = ({
     acousticRingRef.current = acousticMesh;
 
     // Part 5: Facial Nerve Dynamic Arch / Symmetry Wing (Cranial Nerve VII Symbol)
-    // Modeled as a smooth curved tube
     const curve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(-1.8, 0.8, -0.4),
       new THREE.Vector3(-1.4, 2.2, 0.8),
@@ -295,7 +303,7 @@ export const ThreeBeaconScene: React.FC<ThreeBeaconSceneProps> = ({
     coreGroup.add(archMesh);
     facialNerveArchRef.current = archMesh;
 
-    // Part 6: Kinetic Gyroscopic Balance Rings (Depicting Balanced Transparent Ledger)
+    // Part 6: Kinetic Gyroscopic Balance Rings
     const gimbal1Geo = new THREE.TorusGeometry(1.0, 0.045, 12, 48);
     const gimbalMat = new THREE.MeshStandardMaterial({
       color: 0x94a3b8,
@@ -314,7 +322,7 @@ export const ThreeBeaconScene: React.FC<ThreeBeaconSceneProps> = ({
     coreGroup.add(gimbal2Mesh);
     innerGimbal2Ref.current = gimbal2Mesh;
 
-    // Part 7: Prismatic Radiant Heart Gem (Responds to donation target)
+    // Part 7: Prismatic Radiant Heart Gem
     const gemGeo = new THREE.OctahedronGeometry(0.5, 0);
     const gemMat = new THREE.MeshStandardMaterial({
       color: 0xfbbf24,
@@ -352,7 +360,30 @@ export const ThreeBeaconScene: React.FC<ThreeBeaconSceneProps> = ({
     });
     shardMeshesRef.current = shardMap;
 
-    // 8. Raycasting on Click / Hover
+    // Part 9: Golden Momentum Particle Aura
+    const particleCount = 70;
+    const particlePositions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+      const pAngle = Math.random() * Math.PI * 2;
+      const pRadius = 1.2 + Math.random() * 2.5;
+      particlePositions[i * 3] = Math.cos(pAngle) * pRadius;
+      particlePositions[i * 3 + 1] = 0.8 + Math.random() * 3.5;
+      particlePositions[i * 3 + 2] = Math.sin(pAngle) * pRadius;
+    }
+    const particleGeo = new THREE.BufferGeometry();
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+    const particleMat = new THREE.PointsMaterial({
+      color: 0xfbbf24,
+      size: 0.08,
+      transparent: true,
+      opacity: 0.7,
+      blending: THREE.AdditiveBlending,
+    });
+    const particles = new THREE.Points(particleGeo, particleMat);
+    beaconGroup.add(particles);
+    particlesRef.current = particles;
+
+    // 8. Raycasting on Click
     const onPointerDown = (event: MouseEvent) => {
       const rect = renderer.domElement.getBoundingClientRect();
       _mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -366,6 +397,7 @@ export const ThreeBeaconScene: React.FC<ThreeBeaconSceneProps> = ({
         const hit = intersects[0].object as THREE.Mesh;
         const id = hit.userData?.milestoneId;
         if (id) {
+          sound.playBeaconPulse(1.2);
           propsRef.current.onSelectMilestone(id);
         }
       }
@@ -427,10 +459,10 @@ export const ThreeBeaconScene: React.FC<ThreeBeaconSceneProps> = ({
 
       // Rotation & Kinematics
       if (shouldRotate) {
-        beaconGroup.rotation.y += dt * 0.25;
+        beaconGroup.rotation.y += dt * 0.22;
       }
 
-      // Exploded View kinematics: smooth translation on Y & outward radius
+      // Exploded View kinematics
       if (coreGroupRef.current) {
         const targetCoreY = 0.55 + exploded * 1.8;
         coreGroupRef.current.position.y = THREE.MathUtils.damp(
@@ -451,16 +483,30 @@ export const ThreeBeaconScene: React.FC<ThreeBeaconSceneProps> = ({
         innerGimbal2Ref.current.rotation.z = elapsed * 0.6;
       }
 
-      // Acoustic wave oscillation (symbolizing hearing sensitivity & resonance)
+      // Acoustic wave oscillation
       if (acousticRingRef.current) {
         const waveScale = 1.0 + Math.sin(elapsed * 2.5) * 0.04;
         acousticRingRef.current.scale.set(waveScale, waveScale, 1.0);
       }
 
-      // Prismatic core gem pulse
+      // Prismatic core gem pulse & celebration decay
       if (gemCoreRef.current) {
         gemCoreRef.current.rotation.y = elapsed * 1.2;
         gemCoreRef.current.rotation.x = Math.sin(elapsed * 1.5) * 0.2;
+
+        if (pulseIntensityRef.current > 0) {
+          pulseIntensityRef.current = Math.max(0, pulseIntensityRef.current - dt * 1.2);
+          const pScale = 1.0 + pulseIntensityRef.current * 0.6;
+          gemCoreRef.current.scale.set(pScale, pScale, pScale);
+          (gemCoreRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.9 + pulseIntensityRef.current * 2.0;
+        } else {
+          gemCoreRef.current.scale.set(1.0, 1.0, 1.0);
+        }
+      }
+
+      // Particle aura slow upward swirl
+      if (particlesRef.current) {
+        particlesRef.current.rotation.y = elapsed * 0.15;
       }
 
       // Floating allocation shards radial expansion
@@ -478,10 +524,9 @@ export const ThreeBeaconScene: React.FC<ThreeBeaconSceneProps> = ({
         mesh.rotation.y = elapsed * 1.5;
         mesh.rotation.z = Math.sin(elapsed + baseAngle) * 0.2;
 
-        // Highlight selected shard
         const isSelected = id === selectedId;
         const mat = mesh.material as THREE.MeshStandardMaterial;
-        mat.emissiveIntensity = isSelected ? 1.0 : 0.35;
+        mat.emissiveIntensity = isSelected ? 1.1 : 0.35;
         const targetScale = isSelected ? 1.35 : 1.0;
         mesh.scale.setScalar(THREE.MathUtils.damp(mesh.scale.x, targetScale, 6, dt));
       });
@@ -505,7 +550,6 @@ export const ThreeBeaconScene: React.FC<ThreeBeaconSceneProps> = ({
       window.removeEventListener('resize', onResize);
       renderer.domElement.removeEventListener('click', onPointerDown);
 
-      // Dispose Three.js objects
       controls.dispose();
       renderer.dispose();
       if (container.contains(renderer.domElement)) {

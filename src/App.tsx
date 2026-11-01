@@ -11,6 +11,12 @@ import {
   formatGBP,
 } from './utils/transparency';
 import {
+  simulateIncomingPayPalDonation,
+  performAutomatedAudit,
+  AutomatedAuditReport,
+} from './utils/automation';
+import { sound } from './utils/audio';
+import {
   DonationRecord,
   ExpenseRecord,
   MilestoneItem,
@@ -30,6 +36,8 @@ import { AwarenessHubView } from './components/AwarenessHubView';
 import { CampaignGoalTracker } from './components/CampaignGoalTracker';
 import { ImpactReportsSection } from './components/ImpactReportsSection';
 import { DonorPortalView } from './components/DonorPortalView';
+import { AutomationStatusBar } from './components/AutomationStatusBar';
+import { AuditReportModal } from './components/AuditReportModal';
 import { Target, ArrowRight, Heart } from 'lucide-react';
 
 export default function App() {
@@ -96,6 +104,7 @@ export default function App() {
   const [donateCampaignId, setDonateCampaignId] = useState<string | null>(null);
   const [activeReceiptExpense, setActiveReceiptExpense] = useState<ExpenseRecord | null>(null);
   const [filterCampaignForImpact, setFilterCampaignForImpact] = useState<string | null>(null);
+  const [activeAuditModal, setActiveAuditModal] = useState<AutomatedAuditReport | null>(null);
 
   // 3D Scene Interactive Controls
   const [isDockCollapsed, setIsDockCollapsed] = useState(false);
@@ -103,6 +112,8 @@ export default function App() {
   const [autoRotate, setAutoRotate] = useState(true);
   const [cameraPreset, setCameraPreset] = useState<'hero' | 'nerve' | 'core' | 'overhead'>('hero');
   const [selectedMilestoneId, setSelectedMilestoneId] = useState<string | null>(null);
+  const [pulseTrigger, setPulseTrigger] = useState<number>(0);
+  const [lastSimulatedDonor, setLastSimulatedDonor] = useState<string | null>(null);
 
   // Synchronize localStorage on modifications
   useEffect(() => {
@@ -150,6 +161,11 @@ export default function App() {
     return computeTransparencySummary(donations, expenses, 2000, 5000);
   }, [donations, expenses]);
 
+  // Compute live automated audit report
+  const auditReport = useMemo(() => {
+    return performAutomatedAudit(expenses, summary.totalInflowsGBP, summary.totalOutflowsGBP);
+  }, [expenses, summary]);
+
   // Reconcile milestone spending based on current expenses
   const milestones: MilestoneItem[] = useMemo(() => {
     return INITIAL_MILESTONES.map(m => {
@@ -178,14 +194,17 @@ export default function App() {
   }, []);
 
   const handleOpenDonate = (campaignId?: string) => {
+    sound.playSoftClick();
     setDonateCampaignId(campaignId || null);
     setIsDonateOpen(true);
   };
 
   const handleAddDonation = (newDonation: DonationRecord) => {
     setDonations(prev => [newDonation, ...prev]);
+    sound.playDonationChime();
+    setPulseTrigger(prev => prev + 1);
 
-    // Check if new donor email should be added to profiles
+    // If new donor email, link to profiles
     if (newDonation.donorEmail && !donorProfiles.some(p => p.email.toLowerCase() === newDonation.donorEmail?.toLowerCase())) {
       const newProfile: DonorProfile = {
         id: `donor-${Date.now().toString().slice(-4)}`,
@@ -197,6 +216,12 @@ export default function App() {
       };
       setDonorProfiles(prev => [...prev, newProfile]);
     }
+  };
+
+  const handleSimulatePayPalInflow = () => {
+    const newDonation = simulateIncomingPayPalDonation(campaigns, 25);
+    setLastSimulatedDonor(newDonation.donorName);
+    handleAddDonation(newDonation);
   };
 
   const handleAddExpense = (newExpense: ExpenseRecord) => {
@@ -212,16 +237,19 @@ export default function App() {
   };
 
   const handleToggleRecurringStatus = (id: string, newStatus: 'active' | 'paused' | 'cancelled') => {
+    sound.playSoftClick();
     setRecurringDonations(prev =>
       prev.map(r => (r.id === id ? { ...r, status: newStatus } : r))
     );
   };
 
   const handleAddRecurring = (newRec: RecurringDonation) => {
+    sound.playDonationChime();
     setRecurringDonations(prev => [newRec, ...prev]);
   };
 
   const handleSelectCampaignForImpact = (campaignId: string) => {
+    sound.playSoftClick();
     setFilterCampaignForImpact(campaignId);
     setActiveTab('impact');
   };
@@ -232,7 +260,10 @@ export default function App() {
       <NavigationHeader
         summary={summary}
         activeTab={activeTab}
-        onSelectTab={setActiveTab}
+        onSelectTab={tab => {
+          sound.playSoftClick();
+          setActiveTab(tab);
+        }}
         onOpenDonate={() => handleOpenDonate()}
       />
 
@@ -249,6 +280,7 @@ export default function App() {
               explodedFactor={explodedFactor}
               autoRotate={autoRotate}
               cameraPreset={cameraPreset}
+              pulseTrigger={pulseTrigger}
             />
 
             {/* Viewport Floating Goal & Spec Badge (Top Left, under header) */}
@@ -279,7 +311,10 @@ export default function App() {
                   <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5">
                     <span>{((summary.totalInflowsGBP / 2000) * 100).toFixed(0)}% Funded</span>
                     <button
-                      onClick={() => setActiveTab('goals')}
+                      onClick={() => {
+                        sound.playSoftClick();
+                        setActiveTab('goals');
+                      }}
                       className="text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-0.5 cursor-pointer"
                     >
                       <span>Explore Drives</span>
@@ -293,13 +328,22 @@ export default function App() {
             {/* Collapsible Unified Bottom Control Dock */}
             <CollapsibleDock
               isCollapsed={isDockCollapsed}
-              onToggleCollapse={() => setIsDockCollapsed(prev => !prev)}
+              onToggleCollapse={() => {
+                sound.playSoftClick();
+                setIsDockCollapsed(prev => !prev);
+              }}
               explodedFactor={explodedFactor}
               onExplodedChange={setExplodedFactor}
               autoRotate={autoRotate}
-              onToggleAutoRotate={() => setAutoRotate(prev => !prev)}
+              onToggleAutoRotate={() => {
+                sound.playSoftClick();
+                setAutoRotate(prev => !prev);
+              }}
               cameraPreset={cameraPreset}
-              onSelectCameraPreset={setCameraPreset}
+              onSelectCameraPreset={preset => {
+                sound.playSoftClick();
+                setCameraPreset(preset);
+              }}
               milestones={milestones}
               selectedMilestoneId={selectedMilestoneId}
               onSelectMilestone={setSelectedMilestoneId}
@@ -366,6 +410,17 @@ export default function App() {
         )}
       </main>
 
+      {/* Persistent Docked Automation Status Bar */}
+      <AutomationStatusBar
+        onSimulateInflow={handleSimulatePayPalInflow}
+        auditReport={auditReport}
+        onRunAudit={() => {
+          sound.playSoftClick();
+          setActiveAuditModal(auditReport);
+        }}
+        lastSimulatedDonorName={lastSimulatedDonor}
+      />
+
       {/* Global Modals */}
       <DonationModal
         isOpen={isDonateOpen}
@@ -377,6 +432,11 @@ export default function App() {
       <ReceiptViewerModal
         expense={activeReceiptExpense}
         onClose={() => setActiveReceiptExpense(null)}
+      />
+
+      <AuditReportModal
+        report={activeAuditModal}
+        onClose={() => setActiveAuditModal(null)}
       />
     </div>
   );
