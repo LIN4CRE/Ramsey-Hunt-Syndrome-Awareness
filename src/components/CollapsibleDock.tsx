@@ -45,9 +45,9 @@ export const CollapsibleDock: React.FC<CollapsibleDockProps> = ({
       }}
       aria-label="3D Scene Control Dock"
     >
-      <div className="bg-slate-950/95 border border-slate-800 rounded-2xl shadow-2xl text-slate-100 overflow-hidden">
+      <div className="backdrop-blur-xl bg-slate-950/90 border border-slate-700/70 rounded-2xl shadow-2xl text-slate-100 overflow-hidden ring-1 ring-white/5">
         {/* Dock Header & Collapse Toggle */}
-        <div className="px-4 py-2 bg-slate-900 border-b border-slate-800/80 flex items-center justify-between">
+        <div className="px-4 py-2 bg-slate-900/90 border-b border-slate-800/80 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-amber-400" />
             <span className="text-xs font-semibold tracking-wide uppercase text-slate-300">

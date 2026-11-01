@@ -285,41 +285,57 @@ export default function App() {
 
             {/* Viewport Floating Goal & Spec Badge (Top Left, under header) */}
             <div className="absolute top-20 left-4 sm:left-6 z-20 pointer-events-auto select-none max-w-sm space-y-2">
-              <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-4 shadow-2xl">
+              <div className="backdrop-blur-xl bg-slate-950/80 border border-slate-700/60 rounded-2xl p-4 shadow-2xl ring-1 ring-white/5">
                 <div className="flex items-center justify-between text-[11px] font-semibold text-amber-400 uppercase tracking-wider mb-2">
                   <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-amber-400" />
-                    <span>3D Hope &amp; Transparency Beacon</span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>Hope &amp; Transparency Beacon</span>
                   </span>
-                  <span className="text-cyan-400 font-mono">100% Audited</span>
+                  <span className="text-cyan-400 font-mono text-[10px] bg-cyan-950/60 border border-cyan-800/60 px-2 py-0.5 rounded-full">
+                    100% Audited
+                  </span>
                 </div>
 
                 {/* Main Goal Progress Bar */}
                 <div className="space-y-1.5 pt-1 border-t border-slate-800/80">
                   <div className="flex items-center justify-between text-xs font-mono">
-                    <span className="text-slate-300">Phase 1 Goal:</span>
+                    <span className="text-slate-300">Phase 1 Campaign Goal:</span>
                     <span className="text-emerald-400 font-bold">
                       {formatGBP(summary.totalInflowsGBP)} / £2,000
                     </span>
                   </div>
-                  <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                  <div className="w-full bg-slate-900/90 h-2.5 rounded-full overflow-hidden p-0.5 ring-1 ring-slate-800">
                     <div
-                      className="bg-gradient-to-r from-cyan-500 via-amber-500 to-emerald-400 h-full rounded-full transition-all duration-500"
+                      className="bg-gradient-to-r from-cyan-500 via-amber-500 to-emerald-400 h-full rounded-full transition-all duration-500 shadow-sm shadow-emerald-500/50"
                       style={{ width: `${Math.min(100, (summary.totalInflowsGBP / 2000) * 100)}%` }}
                     />
                   </div>
                   <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5">
-                    <span>{((summary.totalInflowsGBP / 2000) * 100).toFixed(0)}% Funded</span>
+                    <span className="font-medium text-slate-300">
+                      {((summary.totalInflowsGBP / 2000) * 100).toFixed(0)}% Funded
+                    </span>
                     <button
                       onClick={() => {
                         sound.playSoftClick();
                         setActiveTab('goals');
                       }}
-                      className="text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-0.5 cursor-pointer"
+                      className="text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-0.5 cursor-pointer transition-colors"
                     >
                       <span>Explore Drives</span>
                       <ArrowRight className="w-3 h-3" />
                     </button>
+                  </div>
+                </div>
+
+                {/* Quick Real-Time Reserve & Solvency Ticker */}
+                <div className="grid grid-cols-2 gap-2 mt-3 pt-2.5 border-t border-slate-800/80 text-[11px] font-mono">
+                  <div className="bg-slate-900/70 rounded-lg p-2 border border-slate-800/60">
+                    <div className="text-[10px] text-slate-400 uppercase tracking-wider">Outflows Reconciled</div>
+                    <div className="text-slate-200 font-semibold">{formatGBP(summary.totalOutflowsGBP)}</div>
+                  </div>
+                  <div className="bg-slate-900/70 rounded-lg p-2 border border-slate-800/60">
+                    <div className="text-[10px] text-slate-400 uppercase tracking-wider">Active Reserve</div>
+                    <div className="text-emerald-400 font-semibold">{formatGBP(summary.reserveBalanceGBP)}</div>
                   </div>
                 </div>
               </div>
